@@ -1,0 +1,184 @@
+import { Magic } from "magic-sdk";
+import {
+    createContext,
+    useState,
+    useEffect,
+    useContext,
+    useCallback,
+} from "react";
+import { ethers } from "ethers";
+
+// GOLIVE
+// export const activeNetwork = "mainnet" // "mainnet", "ropsten", "rinkeby"
+export const activeNetwork = "rinkeby" // "mainnet", "ropsten", "rinkeby"
+
+let m: Magic; // Magic requires window to function
+
+interface User {
+    email: string;
+    address: string;
+    provider: ethers.providers.Web3Provider;
+    kyc: boolean;
+}
+
+interface UserDetails {
+    agreement: boolean;
+    voted: boolean;
+}
+
+type UserContextData = {
+    user: User | null;
+    userDetails: UserDetails | null;
+    logout: () => void;
+    login: (_email: string) => void;
+    setAgreement: () => void;
+};
+
+const UserContext = createContext<UserContextData>({
+    user: null,
+    userDetails: null,
+    login: (_email) => null,
+    logout: () => null,
+    setAgreement: () => null,
+});
+export default UserContext;
+
+
+export const UserContextProvider: React.FC = ({ children }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+    
+    /**
+     * Given the Magic Provider, return address and provider
+     */
+    const getAddressAndProvider = async () => {
+        const provider = new ethers.providers.Web3Provider(
+            m.rpcProvider as any, activeNetwork
+            );
+            const signer = provider.getSigner();
+            // console.log(`signer`, signer)
+
+            const address = await signer.getAddress();
+            // console.log(`address`, address)
+
+            // const network = provider.network // getNetwork() for homestead
+            // console.log(`network`, network)
+
+        // console.log(`network`, network)
+        return { address, provider };
+    };
+
+    /**
+     * Logs the user out of magic
+     */
+    const logout = useCallback(async () => {
+        try {
+            await m.user.logout();
+            setUser(null);
+            setUserDetails(null);
+        } catch (err) {
+            // Do nothing
+            setUser(user);
+            setUserDetails(userDetails);
+        }
+    }, [user]);
+
+    /**
+     * Login with magic, enrich context with address and provider for convenience
+     * @param email
+     */
+    const login = async (email: string) => {
+        try {
+            await m.auth.loginWithMagicLink({ email });
+            const { address, provider } = await getAddressAndProvider();
+            setUser({
+                email,
+                address,
+                provider,
+                kyc: true,
+            });
+        } catch (err) {
+            logout();
+        }
+    };
+
+    const setAgreement = async () => {
+        setUserDetails({
+            agreement: true,
+            voted: false,
+        });
+    };
+
+    useEffect(() => {
+        m = new Magic(process.env.NEXT_PUBLIC_MAGIC_KEY || "");
+
+        /**
+         * Checks if the user is already logged in, if they are, log them in automatically
+         * Used in browser refreshes
+         */
+        const persistUser = async () => {
+            try {
+                const isLoggedIn = await m.user.isLoggedIn();
+
+                if (isLoggedIn) {
+                    const { email } = await m.user.getMetadata();
+                    const { address, provider } = await getAddressAndProvider();
+                    setUser({
+                        email: String(email),
+                        address,
+                        provider,
+                        kyc: true,
+                    });
+                }
+            } catch (err) {
+                logout();
+            }
+        };
+        persistUser();
+    }, []);
+
+    return (
+        <UserContext.Provider
+            value={{
+                user,
+                userDetails,
+                login,
+                logout,
+                setAgreement,
+            }}
+        >
+            {children}
+        </UserContext.Provider>
+    );
+};
+
+export const useLogin = () => {
+    const { login } = useContext(UserContext);
+
+    return login;
+};
+
+export const useLogout = () => {
+    const { logout } = useContext(UserContext);
+
+    return logout;
+};
+
+export const useSetAgreement = () => {
+    const { setAgreement } = useContext(UserContext);
+    
+    return setAgreement;
+};
+
+export const useUser = () => {
+    const { user } = useContext(UserContext);
+
+    return user;
+};
+
+export const userUserDetails = () => {
+    const { userDetails } = useContext(UserContext);
+
+    return userDetails;
+};
+

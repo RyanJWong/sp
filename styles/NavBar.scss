@@ -1,0 +1,12 @@
+@import "../theme/theme";
+
+.AppBar {
+    background: linear-gradient(30deg, #000000 50%, #774BE7 90%);
+}
+
+.drop-shadow-cl {
+    -webkit-filter: drop-shadow(2px 2px 2px #000);
+    filter: drop-shadow(2px 2px 2px #000000);
+    max-width: 160px;
+}
+ 
