@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading */
 import "../styles/index.css";
 import "../styles/index.scss";
 import "../styles/NavBar.scss";
@@ -8,19 +9,22 @@ import { QueryClientProvider, QueryClient } from "react-query";
 
 import { AppProps } from "next/app";
 import { UserContextProvider } from "../context/UserContext";
+import { BlockchainProvider } from "../context/BlockchainContext";
 import Connector from "../containers/Connector";
 import "../styles/global.scss";
 // l
 
 const MyApp: React.FC<AppProps> = ({ Component, pageProps }) => {
     return (
-        <QueryClientProvider client={new QueryClient()}>
-            <Connector.Provider>
-                <UserContextProvider>
-                    <Component {...pageProps} />
-                </UserContextProvider>
-            </Connector.Provider>
-        </QueryClientProvider>
+        <BlockchainProvider>
+            <QueryClientProvider client={new QueryClient()}>
+                <Connector.Provider>
+                    <UserContextProvider>
+                        <Component {...pageProps} />
+                    </UserContextProvider>
+                </Connector.Provider>
+            </QueryClientProvider>
+        </BlockchainProvider>
     );
 };
 
